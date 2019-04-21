@@ -11,14 +11,31 @@
 #define IN_WORD 1;
 
 void GetDir(char *dir);
-void PrintInfo(char *path, int pid);
+void PrintInfo(char *path);
+
 char *progname;
-int num_file=0, num_dir=1;
+int num_file=0, num_dir=1, procCount = 0, *maxProcCount;
 
 int  main(int argc, char *argv[]){
+	maxProcCount = malloc(sizeof (int));
 	progname = basename(argv[0]);
-	GetDir(argv[1]);
-	wait(NULL);
+	if(argv[2])
+		*maxProcCount = atoi(argv[2]);
+	if(!maxProcCount || *maxProcCount <= 0){
+		fprintf(stderr, "%s: Wrong maximum number of processes.\n",progname);
+		exit(1);
+	}
+	if (!argv[1])
+	{
+		fprintf(stderr, "%s: Directory is NULL.\n",progname);
+		exit(1);
+	}
+	else
+		GetDir(argv[1]);
+	while(procCount > 0){
+		wait(NULL);
+		procCount--;
+	}
 	printf("Directories checked: %d\n", num_dir);
 	printf("Files checked: %d\n", num_file);
   return 0;
@@ -48,36 +65,42 @@ void GetDir(char *dir){
 		}
 		else {
 			num_file++;
+			if(maxProcCount != NULL && procCount >= *maxProcCount)
+				wait(NULL);
 			pid_t pid = fork();
 			if(pid == 0){
 				snprintf(path, sizeof(path), "%s/%s", dir, d->d_name);
-				FILE *file = fopen(path, "r");
-				char symbol;
-				int pos = IN_WORD;
-				int words_count = 0;
-				while ((symbol = fgetc(file)) != EOF){
-					if(symbol == ' ' || symbol == '\n' || symbol == '\t'){
-						if(pos == 1){ 
-							words_count++;
-							pos = OUT_WORD;
-						}
-					}
-					else if (pos == 0)
-						pos = IN_WORD;
-				}
-				PrintInfo(path, getpid());
+				PrintInfo(path);
 				exit(0);
 			}
 			else if (pid > 0)
-				printf ("Parent process (pid=%d)\n", getpid());
+			{
+				procCount++;
+			}
+			
 		}
 	}
 	closedir(dp);
 }
 
-void PrintInfo(char *path, int pid){
+void PrintInfo(char *path){
+	char symbol;
+	int pos = IN_WORD;
+	int wordsCount = 0;
+	FILE *file = fopen(path, "r");
+	while ((symbol = fgetc(file)) != EOF){
+		if(symbol == ' ' || symbol == '\n' || symbol == '\t'){
+			if(pos == 1){ 
+				wordsCount++;
+				pos = OUT_WORD;
+			}
+		}
+		else if (pos == 0)
+			pos = IN_WORD;
+	}
+
 	struct stat fileStat;
 	char buf[PATH_MAX];
 	stat(path, &fileStat);
-	printf("%d %s %lld\n",pid, realpath(path,buf),fileStat.st_size);
+	printf("%d %s %lld %d\n", getpid(), realpath(path,buf), fileStat.st_size, wordsCount) ;
 }
