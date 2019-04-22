@@ -14,7 +14,7 @@ void GetDir(char *dir);
 void PrintInfo(char *path);
 
 char *progname;
-int num_file=0, num_dir=1, procCount = 0, *maxProcCount;
+int num_file=0, num_dir=1, procCount = 1, *maxProcCount;
 
 int  main(int argc, char *argv[]){
 	maxProcCount = malloc(sizeof (int));
@@ -50,7 +50,6 @@ void GetDir(char *dir){
     }
 	while ((d = readdir(dp))!= NULL){
 		char path[1024];
-		char buf[200];
 		if (d->d_type == DT_DIR) {
 			if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
 	      continue;
